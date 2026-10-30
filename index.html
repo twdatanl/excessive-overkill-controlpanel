@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot Stream Controls — PS5 / Xbox Gamepad</title>
+  <style>
+    :root {
+      --bg: #111214;
+      --panel: #1e1f22;
+      --card: #2b2d31;
+      --border: #3f4147;
+      --text: #f2f3f5;
+      --muted: #949ba4;
+      --pos: #5865f2;
+      --ang: #f0b232;
+      --cam: #2dc770;
+      --safe: #c084fc;
+      --abort: #f23f43;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.45;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+
+    .badge.ok {
+      border-color: var(--cam);
+      color: #6ee7a0;
+    }
+
+    .badge.mode-POSITION {
+      background: rgba(88, 101, 242, .2);
+      border-color: var(--pos);
+      color: #a5b4fc;
+    }
+
+    .badge.mode-ANGLE {
+      background: rgba(240, 178, 50, .2);
+      border-color: var(--ang);
+      color: #fde047;
+    }
+
+    .badge.mode-CAMERA {
+      background: rgba(45, 199, 112, .2);
+      border-color: var(--cam);
+      color: #86efac;
+    }
+
+    .badge.mode-SAFE {
+      background: rgba(192, 132, 252, .2);
+      border-color: var(--safe);
+      color: #e9d5ff;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13.5px;
+    }
+
+    .tab.active {
+      border-color: var(--pos);
+      background: rgba(88, 101, 242, .18);
+    }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .toggles {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      font-size: 13.5px;
+    }
+
+    .toggles label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    button.btn {
+      background: var(--pos);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    button.btn.secondary {
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+
+    button.btn.danger {
+      background: var(--abort);
+    }
+
+    .sticks {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px 0 14px;
+      gap: 12px;
+    }
+
+    .stick-box {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stick-ring {
+      width: 104px;
+      height: 104px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--border);
+      position: relative;
+      margin: 0 auto 6px;
+    }
+
+    .stick-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--pos);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px var(--pos);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      padding: 7px 9px;
+      border-radius: 6px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform .06s, background .1s;
+    }
+
+    .pill:hover {
+      border-color: #6d717a;
+    }
+
+    .pill.flash {
+      background: var(--pos);
+      border-color: #fff;
+      transform: scale(0.97);
+    }
+
+    .pill span.k {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    pre#log {
+      background: #0b0c0e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      height: 220px;
+      overflow-y: auto;
+      font-family: Consolas, monospace;
+      font-size: 12.5px;
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    pre#snippet {
+      background: #0b0c0e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .hint {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin: 6px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🎮 Robot Stream Controls — Browser Gamepad</h1>
+        <div class="sub">Works with PS5 DualSense &amp; Xbox controllers via the standard HTML5 Gamepad API</div>
+      </div>
+      <div class="badges">
+        <div id="padStatus" class="badge">Press any controller button…</div>
+        <div id="modeBadge" class="badge mode-POSITION">MODE: POSITION</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: SETTINGS -->
+      <div class="card">
+        <h2>1. Discord Token &amp; Options</h2>
+        <div class="field">
+          <label>Discord User Token (kept only in memory of this page)</label>
+          <input type="password" id="token" placeholder="Paste Authorization token here…" autocomplete="off" />
+        </div>
+
+        <div class="toggles">
+          <label><input type="checkbox" id="dryRun" /> Dry Run (only log, don't send)</label>
+          <label><input type="checkbox" id="stickRepeat" checked /> Hold stick to repeat (1.1s)</label>
+          <button class="btn danger" onclick="triggerLabel('Abort', 'manual')">⛔ Trigger ABORT</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: LIVE CONTROLLER VISUALIZER -->
+      <div class="card">
+        <h2>2. Live Controller &amp; Buttons (Click any pill to test)</h2>
+        <div class="sticks">
+          <div class="stick-box">
+            <div class="stick-ring">
+              <div class="stick-dot" id="lsDot"></div>
+            </div>
+            Left Stick (X / Y / Cam)
+          </div>
+          <div class="stick-box">
+            <div class="stick-ring">
+              <div class="stick-dot" id="rsDot"></div>
+            </div>
+            Right Stick (Z / Zoom)
+          </div>
+        </div>
+        <div class="btn-grid" id="pillGrid"></div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h2 style="margin:0;">Activity Log</h2>
+        <button class="btn secondary" onclick="document.getElementById('log').textContent=''">Clear</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------- CONFIG & MAPS -------------------------------
+    const GUILD_ID = "990738288765698169";
+    const CHANNEL_ID = "1191491377402478623";
+    const MESSAGE_ID = "1565517444611702884";
+    const SAFE_MESSAGE_ID = "1565517456003563540";
+    const APPLICATION_ID = "1189733939200397354";
+
+    const CUSTOM_IDS = {
+      "X+": "move:x_plus", "Y+": "move:y_plus", "Z+": "move:z_plus",
+      "X-": "move:x_minus", "Y-": "move:y_minus", "Z-": "move:z_minus",
+      "Xa+": "angle:xa_plus", "Ya+": "angle:ya_plus", "Za+": "angle:za_plus",
+      "Xa-": "angle:xa_minus", "Ya-": "angle:ya_minus", "Za-": "angle:za_minus",
+      "Robot Step+": "robot_step:plus",
+      "Robot Step-": "robot_step:minus",
+      "Abort": "robot:abort",
+      "Cam Up": "move:up", "Cam Down": "move:down",
+      "Cam Left": "move:left", "Cam Right": "move:right",
+      "Zoom+": "zoom:in", "Zoom-": "zoom:out",
+      "Reset Camera": "reset_camera",
+      "Switch Camera": "switch_camera",
+      "Cam Step+": "cam_step:minus",
+      "Cam Step-": "cam_step:plus",
+      "Safe Abort": "robot_panel:abort",
+      "Back Up": "robot_panel:collision_backup",
+      "Safe J23": "robot_panel:go_to_safe_j23",
+      "Safe J1456": "robot_panel:go_to_safe_j1456",
+    };
+
+    const SAFE_MESSAGE_BUTTONS = new Set(["Safe Abort", "Back Up", "Safe J23", "Safe J1456"]);
+    const NO_COOLDOWN = new Set(["Abort", "Safe Abort"]);
+
+    // Standard W3C Gamepad mapping (used by Chrome/Edge/Firefox for BOTH PS5 and Xbox!)
+    // 0: Cross/A, 1: Circle/B, 2: Square/X, 3: Triangle/Y
+    // 4: L1/LB, 5: R1/RB, 6: L2/LT, 7: R2/RT, 8: Create/View, 9: Options/Menu, 17: Touchpad
+    const STD_BTN = {
+      0: "cross", 1: "circle", 2: "square", 3: "triangle",
+      4: "l1", 5: "r1", 6: "l2", 7: "r2",
+      8: "create", 9: "options", 17: "touchpad",
+    };
+
+    const POSITION_MAP = {
+      ls_up: "X+", ls_down: "X-", ls_right: "Y+", ls_left: "Y-",
+      rs_up: "Z+", rs_down: "Z-",
+      r2: "Robot Step+", l2: "Robot Step-",
+    };
+    const ANGLE_MAP = {
+      ls_up: "Xa+", ls_down: "Xa-", ls_right: "Ya+", ls_left: "Ya-",
+      rs_up: "Za+", rs_down: "Za-",
+      r2: "Robot Step+", l2: "Robot Step-",
+    };
+    const CAMERA_MAP = {
+      ls_up: "Cam Up", ls_down: "Cam Down", ls_right: "Cam Right", ls_left: "Cam Left",
+      rs_up: "Zoom+", rs_down: "Zoom-",
+      square: "Reset Camera", circle: "Switch Camera",
+      r2: "Cam Step+", l2: "Cam Step-",
+    };
+    const SAFE_MAP = {
+      triangle: "Back Up", square: "Safe J23", circle: "Safe J1456", cross: "Safe Abort",
+    };
+    const ALWAYS_MAP = { touchpad: "Abort", options: "Abort", create: "Abort" };
+
+    const COOLDOWN_MS = 1000;
+    const STICK_PRESS = 0.6;
+    const STICK_RELEASE = 0.35;
+    const STICK_REPEAT_MS = 1100;
+    const TRIGGER_THRESHOLD = 0.5;
+
+    const SESSION_ID = Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join("");
+    let lastSuccess = 0;
+
+    // Build UI pills
+    const pillGrid = document.getElementById("pillGrid");
+    const pillEls = {};
+    for (const label of Object.keys(CUSTOM_IDS)) {
+      const el = document.createElement("div");
+      el.className = "pill";
+      el.innerHTML = `<span>${label}</span>`;
+      el.onclick = () => triggerLabel(label, "click");
+      pillGrid.appendChild(el);
+      pillEls[label] = el;
+    }
+
+    function log(msg) {
+      const el = document.getElementById("log");
+      const t = new Date().toLocaleTimeString();
+      el.textContent = `[${t}] ${msg}\n` + el.textContent.slice(0, 6000);
+    }
+
+    function makeNonce() {
+      const discordEpoch = 1420070400000n;
+      return String((BigInt(Date.now()) - discordEpoch) << 22n);
+    }
+
+    async function triggerLabel(label, controlName) {
+      if (!label) return;
+      const now = performance.now();
+      if (!NO_COOLDOWN.has(label)) {
+        const rem = (COOLDOWN_MS - (now - lastSuccess)) / 1000;
+        if (rem > 0) {
+          log(`[COOLDOWN] ${label} ignored (${rem.toFixed(2)}s left)`);
+          return;
+        }
+      }
+
+      const pill = pillEls[label];
+      if (pill) {
+        pill.classList.add("flash");
+        setTimeout(() => pill.classList.remove("flash"), 180);
+      }
+
+      const dry = document.getElementById("dryRun").checked;
+      const customId = CUSTOM_IDS[label];
+      const msgId = SAFE_MESSAGE_BUTTONS.has(label) ? SAFE_MESSAGE_ID : MESSAGE_ID;
+
+      log(`[ACTION] ${controlName} -> ${label} (${customId})`);
+
+      if (dry) {
+        lastSuccess = now;
+        log(`[DRY RUN] Would trigger ${label} (custom_id=${customId}, msg=${msgId})`);
+        return;
+      }
+
+      const token = document.getElementById("token").value.trim();
+      if (!token) {
+        log(`[ERROR] Paste your Discord User Token first (or enable Dry Run).`);
+        return;
+      }
+
+      const payload = {
+        type: 3,
+        nonce: makeNonce(),
+        guild_id: GUILD_ID,
+        channel_id: CHANNEL_ID,
+        message_flags: 32768,
+        message_id: msgId,
+        application_id: APPLICATION_ID,
+        session_id: SESSION_ID,
+        data: { component_type: 2, custom_id: customId },
+      };
+
+      try {
+        const resp = await fetch("https://discord.com/api/v9/interactions", {
+          method: "POST",
+          headers: {
+            "Authorization": token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        log(`[HTTP] ${resp.status} ${resp.statusText}`);
+        if (resp.status === 200 || resp.status === 204) {
+          lastSuccess = performance.now();
+        } else {
+          const txt = await resp.text();
+          log(`[BODY] ${txt.slice(0, 300)}`);
+        }
+      } catch (err) {
+        log(`[ERROR] ${err.message}`);
+      }
+    }
+
+    // --------------------------- GAMEPAD POLLING -------------------------------
+    let prevButtons = {};
+    let stickDir = { ls: null, rs: null };
+    let stickFiredAt = { ls: 0, rs: 0 };
+
+    function getStickDirection(x, y, current) {
+      const strength = Math.max(Math.abs(x), Math.abs(y));
+      const limit = current ? STICK_RELEASE : STICK_PRESS;
+      if (strength < limit) return null;
+      if (Math.abs(x) > Math.abs(y)) return x > 0 ? "right" : "left";
+      return y < 0 ? "up" : "down";
+    }
+
+    function resolveAction(l1, r1, control) {
+      if (ALWAYS_MAP[control]) return ALWAYS_MAP[control];
+      if (l1 && r1) return SAFE_MAP[control];
+      if (r1) return CAMERA_MAP[control];
+      if (l1) return ANGLE_MAP[control];
+      return POSITION_MAP[control];
+    }
+
+    function pollGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = Array.from(pads).find(Boolean);
+      const statusEl = document.getElementById("padStatus");
+      const modeEl = document.getElementById("modeBadge");
+
+      if (!gp) {
+        statusEl.textContent = "Press any controller button…";
+        statusEl.classList.remove("ok");
+        requestAnimationFrame(pollGamepad);
+        return;
+      }
+
+      statusEl.textContent = `Connected: ${gp.id.slice(0, 38)}`;
+      statusEl.classList.add("ok");
+
+      const isPressed = (idx) => {
+        const b = gp.buttons[idx];
+        if (!b) return false;
+        return typeof b === "object" ? (b.pressed || b.value > TRIGGER_THRESHOLD) : b > TRIGGER_THRESHOLD;
+      };
+
+      const l1 = isPressed(4);
+      const r1 = isPressed(5);
+      const mode = (l1 && r1) ? "SAFE" : r1 ? "CAMERA" : l1 ? "ANGLE" : "POSITION";
+      modeEl.textContent = `MODE: ${mode}`;
+      modeEl.className = `badge mode-${mode}`;
+
+      // Edge-detect buttons
+      for (const [idxStr, name] of Object.entries(STD_BTN)) {
+        const idx = Number(idxStr);
+        const down = isPressed(idx);
+        if (down && !prevButtons[idx]) {
+          const label = resolveAction(l1, r1, name);
+          if (label) triggerLabel(label, name);
+        }
+        prevButtons[idx] = down;
+      }
+
+      // Analog sticks
+      const lx = gp.axes[0] || 0, ly = gp.axes[1] || 0;
+      const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0;
+      document.getElementById("lsDot").style.transform = `translate(calc(-50% + ${lx * 36}px), calc(-50% + ${ly * 36}px))`;
+      document.getElementById("rsDot").style.transform = `translate(calc(-50% + ${rx * 36}px), calc(-50% + ${ry * 36}px))`;
+
+      const now = performance.now();
+      const repeatOn = document.getElementById("stickRepeat").checked;
+      const axesPair = { ls: [lx, ly], rs: [rx, ry] };
+
+      for (const [stick, [ax, ay]] of Object.entries(axesPair)) {
+        const dir = getStickDirection(ax, ay, stickDir[stick]);
+        const changed = dir !== stickDir[stick];
+        stickDir[stick] = dir;
+        if (!dir) continue;
+        const repeatDue = repeatOn && (now - stickFiredAt[stick] >= STICK_REPEAT_MS);
+        if (changed || repeatDue) {
+          stickFiredAt[stick] = now;
+          const label = resolveAction(l1, r1, `${stick}_${dir}`);
+          if (label) triggerLabel(label, `${stick}_${dir}`);
+        }
+      }
+
+      requestAnimationFrame(pollGamepad);
+    }
+    requestAnimationFrame(pollGamepad);
+  </script>
+</body>
+
+</html>
