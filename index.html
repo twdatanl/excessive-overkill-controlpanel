@@ -366,7 +366,7 @@
     <header>
       <div>
         <h1>🎮 Robot Stream Controls — Browser Gamepad</h1>
-        <div class="sub">Works with PS5 DualSense &amp; Xbox controllers via the standard HTML5 Gamepad API</div>
+        <div class="sub">Works with PS5 DualSense, PS4 DualShock 4 &amp; Xbox controllers via the HTML5 Gamepad API</div>
       </div>
       <div class="badges">
         <div id="padStatus" class="badge">Press any controller button…</div>
@@ -377,18 +377,21 @@
     <div class="grid">
       <!-- LEFT 70%: LIVE STREAM -->
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
           <h2 style="margin:0;">Live Stream Feed (User 540631318937993248)</h2>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn" onclick="startStreamCapture()">📺 Capture Discord Stream</button>
             <button class="btn secondary" onclick="pipStream()">🖼️ Picture-in-Picture</button>
-            <a class="btn secondary" style="text-decoration:none; display:inline-block;" href="discord://-/channels/990738288765698169/1191491377402478623">🔗 Open Voice Channel in Discord</a>
+            <a class="btn secondary" style="text-decoration:none; display:inline-block;"
+              href="discord://-/channels/990738288765698169/1191491377402478623">🔗 Open Voice Channel in Discord</a>
           </div>
         </div>
         <div class="stream-box">
           <video id="streamVideo" autoplay playsinline muted></video>
           <div id="streamPlaceholder" class="stream-placeholder">
-            Click <b>📺 Capture Discord Stream</b> above and select your Discord window/tab to watch the live stream right here.
+            Click <b>📺 Capture Discord Stream</b> above and select your Discord window/tab to watch the live stream
+            right here.
           </div>
         </div>
       </div>
@@ -398,9 +401,30 @@
         <div class="card">
           <h2>1. Discord Token &amp; Options</h2>
           <div class="field">
-            <label>Discord User Token (kept only in memory of this page)</label>
-            <input type="password" id="token" placeholder="Paste Authorization token here…" autocomplete="off" />
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="margin:0;">Discord User Token</label>
+              <div style="display:flex; gap:10px; font-size:12px;">
+                <a href="#" onclick="toggleShowToken(); return false;" id="showTokBtn" style="color:var(--pos); text-decoration:none;">Show</a>
+                <a href="#" onclick="clearSavedToken(); return false;" style="color:var(--muted); text-decoration:none;">Clear</a>
+              </div>
+            </div>
+            <input type="password" id="token" placeholder="Paste token, cURL, or Fetch here (auto-extracts)…" autocomplete="off" oninput="onTokenInput(this)" />
           </div>
+
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); margin-bottom:8px; cursor:pointer;">
+            <input type="checkbox" id="rememberToken" checked onchange="saveTokenPref()" />
+            Remember token in this browser (localStorage)
+          </label>
+
+          <details style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:12.5px;">
+            <summary style="cursor:pointer; font-weight:600; color:#a5b4fc;">❓ How to get your token in 10 seconds</summary>
+            <ol style="margin:8px 0 0 18px; padding:0; color:var(--text); line-height:1.55;">
+              <li>Open <a href="https://discord.com/app" target="_blank" rel="noopener" style="color:#a5b4fc;">discord.com/app</a> and press <b>F12</b> → <b>Network</b> tab.</li>
+              <li>Type <code style="background:#111214; padding:1px 5px; border-radius:4px;">api</code> in the filter box and click any channel.</li>
+              <li><b>Easiest way:</b> Right-click any request (like <code style="background:#111214; padding:1px 5px; border-radius:4px;">messages</code> or <code style="background:#111214; padding:1px 5px; border-radius:4px;">science</code>) → <b>Copy</b> → <b>Copy as fetch (Node.js)</b> or <b>Copy as cURL</b>.</li>
+              <li>Paste that entire block into the token box above — this page <b>automatically extracts</b> the <code style="background:#111214; padding:1px 5px; border-radius:4px;">Authorization</code> token for you!</li>
+            </ol>
+          </details>
 
           <div class="toggles">
             <label><input type="checkbox" id="dryRun" /> Dry Run</label>
@@ -472,13 +496,20 @@
     const SAFE_MESSAGE_BUTTONS = new Set(["Safe Abort", "Back Up", "Safe J23", "Safe J1456"]);
     const NO_COOLDOWN = new Set(["Abort", "Safe Abort"]);
 
-    // Standard W3C Gamepad mapping (used by Chrome/Edge/Firefox for BOTH PS5 and Xbox!)
+    // Standard W3C Gamepad mapping (used by Chrome/Edge/Firefox for PS5, PS4, and Xbox!)
     // 0: Cross/A, 1: Circle/B, 2: Square/X, 3: Triangle/Y
-    // 4: L1/LB, 5: R1/RB, 6: L2/LT, 7: R2/RT, 8: Create/View, 9: Options/Menu, 17: Touchpad
+    // 4: L1/LB, 5: R1/RB, 6: L2/LT, 7: R2/RT, 8: Share/Create/View, 9: Options/Menu, 17: Touchpad
     const STD_BTN = {
       0: "cross", 1: "circle", 2: "square", 3: "triangle",
       4: "l1", 5: "r1", 6: "l2", 7: "r2",
       8: "create", 9: "options", 17: "touchpad",
+    };
+
+    // Fallback raw mapping for PS4 DualShock 4 / PS5 DualSense when a browser reports gp.mapping === ""
+    const RAW_DS_BTN = {
+      0: "square", 1: "cross", 2: "circle", 3: "triangle",
+      4: "l1", 5: "r1", 6: "l2", 7: "r2",
+      8: "create", 9: "options", 13: "touchpad",
     };
 
     const POSITION_MAP = {
@@ -509,7 +540,68 @@
     const TRIGGER_THRESHOLD = 0.5;
 
     const SESSION_ID = Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join("");
+    const TOKEN_STORAGE_KEY = "robot_discord_user_token";
     let lastSuccess = 0;
+
+    function extractTokenFromPaste(raw) {
+      const s = raw.trim();
+      // If user pasted "Copy as fetch" or "Copy as cURL" or a headers block, pull out authorization header
+      const hdrMatch = s.match(/["']?authorization["']?\s*[:=]\s*["']([^"'\r\n]+)["']/i)
+                    || s.match(/-H\s+["']authorization:\s*([^"'\r\n]+)["']/i)
+                    || s.match(/authorization:\s*([^\s"'\r\n]+)/i);
+      if (hdrMatch && hdrMatch[1]) {
+        return hdrMatch[1].trim();
+      }
+      // Or match a standard 3-part Discord token pattern anywhere in the pasted text
+      const tokMatch = s.match(/(mfa\.[\w-]{20,}|[\w-]{20,30}\.[\w-]{5,10}\.[\w-]{20,50})/);
+      if (tokMatch && tokMatch[1]) {
+        return tokMatch[1].trim();
+      }
+      return s.replace(/^["']|["']$/g, "");
+    }
+
+    function onTokenInput(inputEl) {
+      const cleaned = extractTokenFromPaste(inputEl.value);
+      if (cleaned !== inputEl.value) {
+        inputEl.value = cleaned;
+        log("[TOKEN] Automatically extracted authorization token from pasted text!");
+      }
+      saveTokenPref();
+    }
+
+    function saveTokenPref() {
+      const remember = document.getElementById("rememberToken").checked;
+      const val = document.getElementById("token").value.trim();
+      if (remember && val) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, val);
+      } else {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+    }
+
+    function clearSavedToken() {
+      document.getElementById("token").value = "";
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      log("[TOKEN] Cleared token.");
+    }
+
+    function toggleShowToken() {
+      const inp = document.getElementById("token");
+      const btn = document.getElementById("showTokBtn");
+      if (inp.type === "password") {
+        inp.type = "text";
+        btn.textContent = "Hide";
+      } else {
+        inp.type = "password";
+        btn.textContent = "Show";
+      }
+    }
+
+    // Restore saved token on page load
+    const savedTok = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (savedTok) {
+      document.getElementById("token").value = savedTok;
+    }
 
     // Build UI pills
     const pillGrid = document.getElementById("pillGrid");
@@ -639,6 +731,9 @@
       statusEl.textContent = `Connected: ${gp.id.slice(0, 38)}`;
       statusEl.classList.add("ok");
 
+      const isRawPlayStation = gp.mapping !== "standard" && /054c|dualshock|dualsense|wireless controller/i.test(gp.id);
+      const btnMap = isRawPlayStation ? RAW_DS_BTN : STD_BTN;
+
       const isPressed = (idx) => {
         const b = gp.buttons[idx];
         if (!b) return false;
@@ -652,7 +747,7 @@
       modeEl.className = `badge mode-${mode}`;
 
       // Edge-detect buttons
-      for (const [idxStr, name] of Object.entries(STD_BTN)) {
+      for (const [idxStr, name] of Object.entries(btnMap)) {
         const idx = Number(idxStr);
         const down = isPressed(idx);
         if (down && !prevButtons[idx]) {
@@ -662,9 +757,9 @@
         prevButtons[idx] = down;
       }
 
-      // Analog sticks
+      // Analog sticks (raw DirectInput PS4/PS5 uses axes 0,1 for LS and axes 2,5 for RS)
       const lx = gp.axes[0] || 0, ly = gp.axes[1] || 0;
-      const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0;
+      const rx = gp.axes[2] || 0, ry = (isRawPlayStation && gp.axes.length >= 6) ? (gp.axes[5] || 0) : (gp.axes[3] || 0);
       document.getElementById("lsDot").style.transform = `translate(calc(-50% + ${lx * 36}px), calc(-50% + ${ly * 36}px))`;
       document.getElementById("rsDot").style.transform = `translate(calc(-50% + ${rx * 36}px), calc(-50% + ${ry * 36}px))`;
 
